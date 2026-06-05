@@ -170,7 +170,7 @@ export default function ChatGrid() {
     <div className="flex flex-col h-screen bg-zinc-950 overflow-hidden">
       <div className="flex h-12 items-center justify-between px-4 border-b border-zinc-800 shrink-0 z-10">
         <div className="flex items-center gap-3">
-          <span className="text-sm font-bold text-zinc-100 tracking-tight">MultiChat</span>
+          <span className="text-sm font-bold text-zinc-100 tracking-tight">Hiroba</span>
           {panelCount > 0 && (
             <span className="text-xs text-zinc-500">
               {panelCount} panel{panelCount !== 1 ? "s" : ""}

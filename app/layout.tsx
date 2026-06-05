@@ -15,8 +15,8 @@ const fontMono = Geist_Mono({
 })
 
 export const metadata: Metadata = {
-  title: "MultiChat",
-  description: "All your streaming chats in one tab",
+  title: "Hiroba",
+  description: "A public plaza for all your streams — every chat in one place.",
 }
 
 export default function RootLayout({
