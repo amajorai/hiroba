@@ -1,6 +1,18 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { HugeiconsIcon } from "@hugeicons/react"
+import { Add01Icon } from "@hugeicons/core-free-icons"
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 import PLATFORMS from "@/lib/platforms"
 import type { Platform, ChatPanel } from "@/lib/types"
 
@@ -41,67 +53,43 @@ export default function AddChatDialog({
     }
   }, [editPanel, open])
 
-  if (!open) return null
-
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (!channel.trim()) return
     const resolvedLabel = label.trim() || channel.trim()
     if (editPanel) {
-      onUpdate({
-        ...editPanel,
-        platform,
-        channel: channel.trim(),
-        label: resolvedLabel,
-      })
+      onUpdate({ ...editPanel, platform, channel: channel.trim(), label: resolvedLabel })
     } else {
-      onAdd({
-        id: generateId(platform, channel.trim()),
-        platform,
-        channel: channel.trim(),
-        label: resolvedLabel,
-      })
+      onAdd({ id: generateId(platform, channel.trim()), platform, channel: channel.trim(), label: resolvedLabel })
     }
     onClose()
   }
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm"
-      onClick={(e) => {
-        if (e.target === e.currentTarget) onClose()
-      }}
-    >
-      <div className="w-full max-w-sm rounded-xl bg-zinc-900 border border-zinc-700 shadow-2xl p-6">
-        <h2 className="text-sm font-semibold text-zinc-100 mb-4">
-          {editPanel ? "Edit Chat Panel" : "Add Chat Panel"}
-        </h2>
+    <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>{editPanel ? "Edit Chat Panel" : "Add Chat Panel"}</DialogTitle>
+        </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="text-xs text-zinc-400 mb-2 block">Platform</label>
+        <form onSubmit={handleSubmit} className="space-y-5">
+          <div className="space-y-2">
+            <Label>Platform</Label>
             <div className="grid grid-cols-3 gap-2">
               {PLATFORM_KEYS.map((p) => (
                 <button
                   key={p}
                   type="button"
                   onClick={() => setPlatform(p)}
-                  className="flex flex-col items-center gap-1 py-2 px-1 rounded-lg border text-xs font-medium transition-all"
+                  className="flex flex-col items-center gap-1.5 rounded-2xl border py-2.5 px-2 text-xs font-medium transition-all"
                   style={{
-                    borderColor:
-                      platform === p
-                        ? PLATFORMS[p].color
-                        : "rgb(63 63 70)",
-                    backgroundColor:
-                      platform === p
-                        ? `${PLATFORMS[p].color}15`
-                        : "transparent",
-                    color:
-                      platform === p ? PLATFORMS[p].color : "rgb(161 161 170)",
+                    borderColor: platform === p ? PLATFORMS[p].color : "var(--border)",
+                    backgroundColor: platform === p ? `color-mix(in oklch, ${PLATFORMS[p].color} 12%, transparent)` : "var(--muted)",
+                    color: platform === p ? PLATFORMS[p].color : "var(--muted-foreground)",
                   }}
                 >
                   <span
-                    className="w-2.5 h-2.5 rounded-full"
+                    className="size-2 rounded-full"
                     style={{ backgroundColor: PLATFORMS[p].color }}
                   />
                   {PLATFORMS[p].name}
@@ -110,67 +98,38 @@ export default function AddChatDialog({
             </div>
           </div>
 
-          <div>
-            <label
-              htmlFor="channel"
-              className="text-xs text-zinc-400 mb-1.5 block"
-            >
-              {PLATFORMS[platform].inputLabel}
-            </label>
-            <input
+          <div className="space-y-2">
+            <Label htmlFor="channel">{PLATFORMS[platform].inputLabel}</Label>
+            <Input
               id="channel"
-              type="text"
               value={channel}
               onChange={(e) => setChannel(e.target.value)}
               placeholder={PLATFORMS[platform].placeholder}
-              className="w-full rounded-md bg-zinc-800 border border-zinc-700 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:outline-none focus:ring-1 focus:ring-zinc-500"
               autoFocus
             />
           </div>
 
-          <div>
-            <label
-              htmlFor="label"
-              className="text-xs text-zinc-400 mb-1.5 block"
-            >
+          <div className="space-y-2">
+            <Label htmlFor="label">
               Display name
-              <span className="text-zinc-600 ml-1">(optional)</span>
-            </label>
-            <input
+              <span className="ml-1 font-normal text-muted-foreground">(optional)</span>
+            </Label>
+            <Input
               id="label"
-              type="text"
               value={label}
               onChange={(e) => setLabel(e.target.value)}
               placeholder="e.g. My Stream"
-              className="w-full rounded-md bg-zinc-800 border border-zinc-700 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:outline-none focus:ring-1 focus:ring-zinc-500"
             />
           </div>
 
-          <div className="flex gap-2 pt-1">
-            <button
-              type="button"
-              onClick={onClose}
-              className="flex-1 rounded-md bg-zinc-800 hover:bg-zinc-700 text-zinc-300 py-2 text-sm font-medium transition-colors"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={!channel.trim()}
-              className="flex-1 rounded-md py-2 text-sm font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-              style={{
-                backgroundColor: channel.trim()
-                  ? PLATFORMS[platform].color
-                  : undefined,
-                color: channel.trim() ? "#000" : undefined,
-                background: !channel.trim() ? "rgb(39 39 42)" : undefined,
-              }}
-            >
-              {editPanel ? "Save" : "Add"}
-            </button>
-          </div>
+          <DialogFooter showCloseButton>
+            <Button type="submit" disabled={!channel.trim()}>
+              <HugeiconsIcon icon={Add01Icon} strokeWidth={2} />
+              {editPanel ? "Save changes" : "Add panel"}
+            </Button>
+          </DialogFooter>
         </form>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   )
 }
