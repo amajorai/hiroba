@@ -7,6 +7,7 @@ import {
   type Layout,
   type LayoutItem,
   type ResponsiveLayouts,
+  type ResizeHandleAxis,
 } from "react-grid-layout/legacy"
 import "react-grid-layout/css/styles.css"
 import { HugeiconsIcon } from "@hugeicons/react"
@@ -253,6 +254,33 @@ export default function ChatGrid() {
 
   const panelCount = panels.length
 
+  // 3-dot corner handles, plain div for edge handles
+  function renderResizeHandle(axis: ResizeHandleAxis, ref: React.Ref<HTMLElement>) {
+    const corners: Partial<Record<ResizeHandleAxis, number>> = { se: 0, sw: 90, nw: 180, ne: 270 }
+    const rotation = corners[axis]
+    if (rotation === undefined) {
+      // Edge handle — no visual content, CSS handles the pill indicator
+      return <div ref={ref as React.Ref<HTMLDivElement>} className={`react-resizable-handle react-resizable-handle-${axis}`} />
+    }
+    return (
+      <div
+        ref={ref as React.Ref<HTMLDivElement>}
+        className={`react-resizable-handle react-resizable-handle-${axis} flex items-center justify-center`}
+      >
+        <svg
+          width="10" height="10" viewBox="0 0 10 10"
+          style={{ transform: `rotate(${rotation}deg)` }}
+          className="fill-foreground/25 transition-colors"
+        >
+          {/* 3 dots in SE-corner L-shape */}
+          <circle cx="7.5" cy="7.5" r="1.5" />
+          <circle cx="3.5" cy="7.5" r="1.5" />
+          <circle cx="7.5" cy="3.5" r="1.5" />
+        </svg>
+      </div>
+    )
+  }
+
   return (
     <div className="relative h-screen bg-background overflow-hidden">
       {panelCount > 0 ? (
@@ -265,6 +293,7 @@ export default function ChatGrid() {
             rowHeight={rowHeight}
             draggableHandle=".drag-handle"
             resizeHandles={["se", "sw", "ne", "nw", "e", "w", "n", "s"]}
+            resizeHandle={renderResizeHandle}
             compactType={null}
             allowOverlap={true}
             onLayoutChange={handleLayoutChange}
