@@ -69,7 +69,7 @@ export default function ChatGrid() {
 
   useEffect(() => {
     const calc = () => {
-      const available = window.innerHeight - 49
+      const available = window.innerHeight
       const marginTotal = 4 * (DEFAULT_H - 1)
       setRowHeight(Math.max(Math.floor((available - 8 - marginTotal) / DEFAULT_H), 18))
     }
@@ -142,34 +142,9 @@ export default function ChatGrid() {
   const panelCount = panels.length
 
   return (
-    <div className="flex flex-col h-screen bg-background overflow-hidden">
-      <header className="flex h-12 shrink-0 items-center gap-2 border-b px-4">
-        <span className="font-heading text-sm font-semibold">Hiroba</span>
-        <Separator orientation="vertical" className="h-4!" />
-        <span className="text-xs text-muted-foreground">
-          {panelCount} panel{panelCount !== 1 ? "s" : ""}
-        </span>
-        <div className="ml-auto flex items-center gap-2">
-          {panelCount > 0 && (
-            <>
-              <LayoutPicker onSelect={applyLayoutPreset} />
-              <Tooltip>
-                <TooltipTrigger render={<Button variant="ghost" size="icon-sm" onClick={resetLayout} />}>
-                  <HugeiconsIcon icon={Refresh01Icon} strokeWidth={2} />
-                </TooltipTrigger>
-                <TooltipContent>Reset layout</TooltipContent>
-              </Tooltip>
-            </>
-          )}
-          <Button size="sm" onClick={() => setAddOpen(true)}>
-            <HugeiconsIcon icon={Add01Icon} strokeWidth={2} />
-            Add Chat
-          </Button>
-        </div>
-      </header>
-
+    <div className="relative h-screen bg-background overflow-hidden">
       {panelCount > 0 ? (
-        <div className="flex-1 overflow-auto">
+        <div className="h-full overflow-auto">
           <ResponsiveGridLayout
             layouts={layouts}
             breakpoints={{ lg: 1200, md: 996, sm: 768, xs: 480, xxs: 0 }}
@@ -226,7 +201,7 @@ export default function ChatGrid() {
           </ResponsiveGridLayout>
         </div>
       ) : (
-        <div className="flex-1 flex items-center justify-center">
+        <div className="flex h-full items-center justify-center">
           <div className="text-center space-y-3">
             <p className="text-muted-foreground text-sm">No chat panels yet</p>
             <Button variant="outline" onClick={() => setAddOpen(true)}>
@@ -236,6 +211,29 @@ export default function ChatGrid() {
           </div>
         </div>
       )}
+
+      {/* Floating toolbar */}
+      <div className="pointer-events-none fixed bottom-6 left-0 right-0 z-50 flex justify-center">
+        <div className="pointer-events-auto flex items-center gap-1 rounded-2xl border bg-popover/90 px-2 py-1.5 shadow-xl ring-1 ring-foreground/5 backdrop-blur-md dark:ring-foreground/10">
+          {panelCount > 0 && (
+            <>
+              <LayoutPicker onSelect={applyLayoutPreset} />
+              <Separator orientation="vertical" className="h-4 mx-0.5" />
+              <Tooltip>
+                <TooltipTrigger render={<Button variant="ghost" size="icon-sm" onClick={resetLayout} />}>
+                  <HugeiconsIcon icon={Refresh01Icon} strokeWidth={2} />
+                </TooltipTrigger>
+                <TooltipContent side="top">Reset layout</TooltipContent>
+              </Tooltip>
+              <Separator orientation="vertical" className="h-4 mx-0.5" />
+            </>
+          )}
+          <Button size="sm" onClick={() => setAddOpen(true)}>
+            <HugeiconsIcon icon={Add01Icon} strokeWidth={2} />
+            Add Chat
+          </Button>
+        </div>
+      </div>
 
       <AddChatDialog
         open={addOpen || editPanel !== null}
