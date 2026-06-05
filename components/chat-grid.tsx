@@ -17,6 +17,7 @@ import {
   GripHorizontalIcon,
   Refresh01Icon,
 } from "@hugeicons/core-free-icons"
+import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip"
 import { Separator } from "@/components/ui/separator"
@@ -55,6 +56,8 @@ export default function ChatGrid() {
   const [addOpen, setAddOpen] = useState(false)
   const [editPanel, setEditPanel] = useState<ChatPanel | null>(null)
   const [userPresets, setUserPresets] = useState<UserPreset[]>([])
+  const [swapTargetId, setSwapTargetId] = useState<string | null>(null)
+  const [draggingId, setDraggingId] = useState<string | null>(null)
   const initialized = useRef(false)
 
   useEffect(() => {
@@ -80,10 +83,74 @@ export default function ChatGrid() {
     return () => window.removeEventListener("resize", calc)
   }, [])
 
+  const swapping = useRef(false)
+
   const handleLayoutChange = useCallback((_current: Layout, allLayouts: ResponsiveLayouts) => {
+    if (swapping.current) return
     setLayouts(allLayouts)
     saveLayouts(allLayouts as Record<string, unknown[]>)
   }, [])
+
+  const handleDragStart = useCallback((_layout: Layout, _old: LayoutItem | null, item: LayoutItem | null) => {
+    setDraggingId(item?.i ?? null)
+  }, [])
+
+  const handleDrag = useCallback((layout: Layout, _old: LayoutItem | null, item: LayoutItem | null) => {
+    if (!item) return
+    const dragged = (layout as LayoutItem[]).find(l => l.i === item.i)
+    if (!dragged) return
+    let target: LayoutItem | null = null
+    let best = 0
+    for (const l of layout as LayoutItem[]) {
+      if (l.i === dragged.i) continue
+      const xO = Math.max(0, Math.min(dragged.x + dragged.w, l.x + l.w) - Math.max(dragged.x, l.x))
+      const yO = Math.max(0, Math.min(dragged.y + dragged.h, l.y + l.h) - Math.max(dragged.y, l.y))
+      const a = xO * yO
+      if (a > best) { best = a; target = l }
+    }
+    const minArea = target ? Math.min(dragged.w * dragged.h, target.w * target.h) : 0
+    setSwapTargetId(target && best >= minArea * 0.3 ? target.i : null)
+  }, [])
+
+  const handleDragStop = useCallback((
+    layout: Layout,
+    oldItem: LayoutItem | null,
+    newItem: LayoutItem | null,
+  ) => {
+    if (!oldItem || !newItem) return
+    const dragged = (layout as LayoutItem[]).find(l => l.i === newItem.i)
+    if (!dragged) return
+
+    // Find the item most overlapped by the dragged panel
+    let target: LayoutItem | null = null
+    let bestOverlap = 0
+    for (const item of layout as LayoutItem[]) {
+      if (item.i === dragged.i) continue
+      const xOver = Math.max(0, Math.min(dragged.x + dragged.w, item.x + item.w) - Math.max(dragged.x, item.x))
+      const yOver = Math.max(0, Math.min(dragged.y + dragged.h, item.y + item.h) - Math.max(dragged.y, item.y))
+      const area = xOver * yOver
+      if (area > bestOverlap) { bestOverlap = area; target = item }
+    }
+
+    if (!target) return
+    const minArea = Math.min(dragged.w * dragged.h, target.w * target.h)
+    if (bestOverlap < minArea * 0.3) return // less than 30% overlap — don't swap
+
+    // Swap: dragged takes target's slot, target takes dragged's original slot
+    const swapped = (layout as LayoutItem[]).map(item => {
+      if (item.i === dragged.i) return { ...item, x: target!.x, y: target!.y, w: target!.w, h: target!.h }
+      if (item.i === target!.i) return { ...item, x: oldItem.x, y: oldItem.y, w: oldItem.w, h: oldItem.h }
+      return item
+    })
+    const next: ResponsiveLayouts = { lg: swapped, md: swapped, sm: swapped }
+    swapping.current = true
+    setLayouts(next)
+    saveLayouts(next as Record<string, unknown[]>)
+    setTimeout(() => { swapping.current = false }, 50)
+    setDraggingId(null)
+    setSwapTargetId(null)
+  }, [])
+
 
   const addPanel = useCallback(
     (panel: ChatPanel) => {
@@ -178,6 +245,9 @@ export default function ChatGrid() {
             resizeHandles={["se", "sw", "ne", "nw", "e", "w", "n", "s"]}
             compactType={null}
             onLayoutChange={handleLayoutChange}
+            onDragStart={handleDragStart}
+            onDrag={handleDrag}
+            onDragStop={handleDragStop}
             margin={[4, 4]}
             containerPadding={[4, 4]}
           >
@@ -186,7 +256,11 @@ export default function ChatGrid() {
               return (
                 <div
                   key={panel.id}
-                  className="flex flex-col rounded-2xl overflow-hidden border bg-card"
+                  className={cn(
+                    "flex flex-col rounded-2xl overflow-hidden border bg-card transition-shadow",
+                    swapTargetId === panel.id && "ring-2 ring-primary shadow-lg shadow-primary/20",
+                    draggingId === panel.id && "opacity-60",
+                  )}
                 >
                   <div className="drag-handle flex h-9 shrink-0 cursor-grab items-center gap-2 border-b bg-card px-2 active:cursor-grabbing select-none">
                     <span className="text-muted-foreground/40 shrink-0">
