@@ -22,7 +22,7 @@ import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip
 import { Separator } from "@/components/ui/separator"
 import PLATFORMS from "@/lib/platforms"
 import type { ChatPanel } from "@/lib/types"
-import { loadPanels, savePanels, loadLayouts, saveLayouts } from "@/lib/storage"
+import { loadPanels, savePanels, loadLayouts, saveLayouts, loadUserPresets, saveUserPresets, type UserPreset } from "@/lib/storage"
 import { applyPreset, type LayoutPreset } from "@/lib/layouts"
 import AddChatDialog from "./add-chat-dialog"
 import LayoutPicker from "./layout-picker"
@@ -54,6 +54,7 @@ export default function ChatGrid() {
   const [rowHeight, setRowHeight] = useState(50)
   const [addOpen, setAddOpen] = useState(false)
   const [editPanel, setEditPanel] = useState<ChatPanel | null>(null)
+  const [userPresets, setUserPresets] = useState<UserPreset[]>([])
   const initialized = useRef(false)
 
   useEffect(() => {
@@ -65,6 +66,7 @@ export default function ChatGrid() {
     const initialLayouts = (savedLayouts as ResponsiveLayouts | null) ?? createDefaultLayouts(initialPanels)
     setPanels(initialPanels)
     setLayouts(initialLayouts)
+    setUserPresets(loadUserPresets())
   }, [])
 
   useEffect(() => {
@@ -138,6 +140,28 @@ export default function ChatGrid() {
     setLayouts(fresh)
     saveLayouts(fresh as Record<string, unknown[]>)
   }, [panels])
+
+  const saveUserPreset = useCallback((name: string) => {
+    const preset: UserPreset = {
+      id: `user-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      name,
+      layouts,
+    }
+    const next = [...userPresets, preset]
+    setUserPresets(next)
+    saveUserPresets(next)
+  }, [layouts, userPresets])
+
+  const deleteUserPreset = useCallback((id: string) => {
+    const next = userPresets.filter((p) => p.id !== id)
+    setUserPresets(next)
+    saveUserPresets(next)
+  }, [userPresets])
+
+  const applyUserPreset = useCallback((preset: UserPreset) => {
+    setLayouts(preset.layouts)
+    saveLayouts(preset.layouts as Record<string, unknown[]>)
+  }, [])
 
   const panelCount = panels.length
 
@@ -217,7 +241,14 @@ export default function ChatGrid() {
         <div className="pointer-events-auto flex items-center gap-1 rounded-2xl border bg-popover/90 px-2 py-1.5 shadow-xl ring-1 ring-foreground/5 backdrop-blur-md dark:ring-foreground/10">
           {panelCount > 0 && (
             <>
-              <LayoutPicker onSelect={applyLayoutPreset} />
+              <LayoutPicker
+                currentLayouts={layouts}
+                savedPresets={userPresets}
+                onSelect={applyLayoutPreset}
+                onApplySaved={applyUserPreset}
+                onSave={saveUserPreset}
+                onDelete={deleteUserPreset}
+              />
               <Separator orientation="vertical" className="h-4 mx-0.5" />
               <Tooltip>
                 <TooltipTrigger render={<Button variant="ghost" size="icon-sm" onClick={resetLayout} />}>
