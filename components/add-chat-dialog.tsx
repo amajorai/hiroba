@@ -88,10 +88,7 @@ export default function AddChatDialog({
                     color: platform === p ? PLATFORMS[p].color : "var(--muted-foreground)",
                   }}
                 >
-                  <span
-                    className="size-2 rounded-full"
-                    style={{ backgroundColor: PLATFORMS[p].color }}
-                  />
+                  {(() => { const Icon = PLATFORMS[p].icon; return <Icon className="size-5" /> })()}
                   {PLATFORMS[p].name}
                 </button>
               ))}

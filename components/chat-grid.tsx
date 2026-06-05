@@ -23,7 +23,9 @@ import { Separator } from "@/components/ui/separator"
 import PLATFORMS from "@/lib/platforms"
 import type { ChatPanel } from "@/lib/types"
 import { loadPanels, savePanels, loadLayouts, saveLayouts } from "@/lib/storage"
+import { applyPreset, type LayoutPreset } from "@/lib/layouts"
 import AddChatDialog from "./add-chat-dialog"
+import LayoutPicker from "./layout-picker"
 
 const ResponsiveGridLayout = WidthProvider(Responsive)
 
@@ -131,6 +133,12 @@ export default function ChatGrid() {
     saveLayouts(fresh as Record<string, unknown[]>)
   }, [panels])
 
+  const applyLayoutPreset = useCallback((preset: LayoutPreset) => {
+    const fresh = applyPreset(preset, panels)
+    setLayouts(fresh)
+    saveLayouts(fresh as Record<string, unknown[]>)
+  }, [panels])
+
   const panelCount = panels.length
 
   return (
@@ -143,12 +151,15 @@ export default function ChatGrid() {
         </span>
         <div className="ml-auto flex items-center gap-2">
           {panelCount > 0 && (
-            <Tooltip>
-              <TooltipTrigger render={<Button variant="ghost" size="icon-sm" onClick={resetLayout} />}>
-                <HugeiconsIcon icon={Refresh01Icon} strokeWidth={2} />
-              </TooltipTrigger>
-              <TooltipContent>Reset layout</TooltipContent>
-            </Tooltip>
+            <>
+              <LayoutPicker onSelect={applyLayoutPreset} />
+              <Tooltip>
+                <TooltipTrigger render={<Button variant="ghost" size="icon-sm" onClick={resetLayout} />}>
+                  <HugeiconsIcon icon={Refresh01Icon} strokeWidth={2} />
+                </TooltipTrigger>
+                <TooltipContent>Reset layout</TooltipContent>
+              </Tooltip>
+            </>
           )}
           <Button size="sm" onClick={() => setAddOpen(true)}>
             <HugeiconsIcon icon={Add01Icon} strokeWidth={2} />
@@ -166,6 +177,7 @@ export default function ChatGrid() {
             rowHeight={rowHeight}
             draggableHandle=".drag-handle"
             resizeHandles={["se", "sw", "ne", "nw", "e", "w", "n", "s"]}
+            compactType={null}
             onLayoutChange={handleLayoutChange}
             margin={[4, 4]}
             containerPadding={[4, 4]}
@@ -178,17 +190,11 @@ export default function ChatGrid() {
                   className="flex flex-col rounded-2xl overflow-hidden border bg-card"
                 >
                   <div className="drag-handle flex h-9 shrink-0 cursor-grab items-center gap-2 border-b bg-card px-2 active:cursor-grabbing select-none">
-                    <span className="text-muted-foreground/50">
+                    <span className="text-muted-foreground/40 shrink-0">
                       <HugeiconsIcon icon={GripHorizontalIcon} size={14} strokeWidth={1.5} />
                     </span>
-                    <span
-                      className="size-2 shrink-0 rounded-full"
-                      style={{ backgroundColor: pc.color }}
-                    />
+                    <pc.icon className="size-3.5 shrink-0" />
                     <span className="truncate text-xs font-medium">{panel.label}</span>
-                    <span className="shrink-0 text-xs text-muted-foreground hidden sm:inline">
-                      {pc.name}
-                    </span>
                     <div className="ml-auto flex items-center">
                       <Tooltip>
                         <TooltipTrigger render={<Button variant="ghost" size="icon-xs" onClick={() => setEditPanel(panel)} />}>

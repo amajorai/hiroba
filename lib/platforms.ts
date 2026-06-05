@@ -1,9 +1,16 @@
+import type { ComponentType } from "react"
 import type { Platform } from "./types"
+import { YouTubeIcon } from "@/components/icons/youtube"
+import { TwitchIcon } from "@/components/icons/twitch"
+import { KickIcon } from "@/components/icons/kick"
+import { FacebookIcon } from "@/components/icons/facebook"
+import { RumbleIcon } from "@/components/icons/rumble"
 
 export interface PlatformConfig {
   id: Platform
   name: string
   color: string
+  icon: ComponentType<{ className?: string }>
   placeholder: string
   inputLabel: string
   buildUrl: (channel: string) => string
@@ -14,6 +21,7 @@ const PLATFORMS: Record<Platform, PlatformConfig> = {
     id: "youtube",
     name: "YouTube",
     color: "#FF0000",
+    icon: YouTubeIcon,
     placeholder: "Video ID (e.g. QsaTT5HcAyY)",
     inputLabel: "Video ID",
     buildUrl: (videoId) => {
@@ -26,6 +34,7 @@ const PLATFORMS: Record<Platform, PlatformConfig> = {
     id: "twitch",
     name: "Twitch",
     color: "#9146FF",
+    icon: TwitchIcon,
     placeholder: "Channel name (e.g. jiaweihq)",
     inputLabel: "Channel Name",
     buildUrl: (channel) => {
@@ -38,6 +47,7 @@ const PLATFORMS: Record<Platform, PlatformConfig> = {
     id: "kick",
     name: "Kick",
     color: "#53FC18",
+    icon: KickIcon,
     placeholder: "Channel name (e.g. jiaweing)",
     inputLabel: "Channel Name",
     buildUrl: (channel) => `https://kick.com/popout/${channel}/chat`,
@@ -46,6 +56,7 @@ const PLATFORMS: Record<Platform, PlatformConfig> = {
     id: "rumble",
     name: "Rumble",
     color: "#85C742",
+    icon: RumbleIcon,
     placeholder: "Stream ID from chat embed URL",
     inputLabel: "Stream ID",
     buildUrl: (id) => `https://rumble.com/chat/popup/${id}`,
@@ -54,6 +65,7 @@ const PLATFORMS: Record<Platform, PlatformConfig> = {
     id: "facebook",
     name: "Facebook",
     color: "#1877F2",
+    icon: FacebookIcon,
     placeholder: "Video ID",
     inputLabel: "Video ID",
     buildUrl: (videoId) =>
