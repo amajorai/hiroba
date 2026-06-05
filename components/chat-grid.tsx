@@ -372,7 +372,6 @@ export default function ChatGrid() {
               onSave={saveUserPreset}
               onDelete={deleteUserPreset}
             />
-            <Separator orientation="vertical" className="mx-0.5 h-4" />
             <Tooltip>
               <TooltipTrigger
                 render={<Button variant="ghost" size="icon-sm" onClick={resetLayout} />}
@@ -381,7 +380,6 @@ export default function ChatGrid() {
               </TooltipTrigger>
               <TooltipContent side="top">Reset layout</TooltipContent>
             </Tooltip>
-            <Separator orientation="vertical" className="mx-0.5 h-4" />
             <Button size="sm" onClick={() => setAddOpen(true)}>
               <HugeiconsIcon icon={Add01Icon} strokeWidth={2} />
               Add Chat
