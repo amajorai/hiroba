@@ -1,4 +1,4 @@
-# Hiroba 広場
+# 💬 Hiroba 広場
 
 > A public plaza where everyone gathers — all your stream chats in one place.
 
