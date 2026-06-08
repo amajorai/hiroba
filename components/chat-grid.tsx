@@ -504,9 +504,7 @@ export default function ChatGrid() {
 
       {/* Floating toolbar — only when panels exist, appears on hover near bottom */}
       {panelCount > 0 && (
-        <div className="pointer-events-none fixed inset-x-0 bottom-0 z-50 flex h-24 items-end justify-center pb-5 group/dock">
-          {/* Invisible hover-capture zone */}
-          <div className="pointer-events-auto absolute inset-0" />
+        <div className="pointer-events-none fixed bottom-0 left-1/2 z-50 flex h-24 w-fit -translate-x-1/2 items-end justify-center pb-5 group/dock">
           {/* Toolbar pill */}
           <div className="pointer-events-auto relative flex items-center gap-1 rounded-2xl border bg-popover/90 px-2 py-1.5 shadow-xl ring-1 ring-foreground/5 backdrop-blur-md dark:ring-foreground/10 opacity-0 translate-y-3 transition-all duration-150 ease-out group-hover/dock:opacity-100 group-hover/dock:translate-y-0">
             <LayoutPicker
@@ -526,19 +524,12 @@ export default function ChatGrid() {
               <TooltipContent side="top">Reset layout</TooltipContent>
             </Tooltip>
             <DropdownMenu>
-              <Tooltip>
-                <TooltipTrigger
-                  render={
-                    <DropdownMenuTrigger
-                      render={<Button variant="ghost" size="sm" />}
-                    />
-                  }
-                >
-                  <HugeiconsIcon icon={ZoomIcon} strokeWidth={2} data-icon="inline-start" />
-                  {Math.round(uiZoom * 100)}%
-                </TooltipTrigger>
-                <TooltipContent side="top">UI zoom</TooltipContent>
-              </Tooltip>
+              <DropdownMenuTrigger
+                render={<Button variant="ghost" size="sm" title="UI zoom" />}
+              >
+                <HugeiconsIcon icon={ZoomIcon} strokeWidth={2} data-icon="inline-start" />
+                {Math.round(uiZoom * 100)}%
+              </DropdownMenuTrigger>
               <DropdownMenuContent align="center" side="top" className="min-w-32">
                 <DropdownMenuLabel>UI zoom</DropdownMenuLabel>
                 <DropdownMenuGroup>
