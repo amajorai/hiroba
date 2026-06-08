@@ -4,6 +4,7 @@ import type { ResponsiveLayouts } from "react-grid-layout/legacy"
 const PANELS_KEY = "multichat-panels"
 const LAYOUTS_KEY = "multichat-layouts"
 const USER_PRESETS_KEY = "hiroba-saved-presets"
+const UI_ZOOM_KEY = "hiroba-ui-zoom"
 
 export interface UserPreset {
   id: string
@@ -51,4 +52,15 @@ export function loadLayouts(): Record<string, unknown[]> | null {
   } catch {
     return null
   }
+}
+
+export function saveUiZoom(zoom: number) {
+  localStorage.setItem(UI_ZOOM_KEY, String(zoom))
+}
+
+export function loadUiZoom(): number | null {
+  const data = localStorage.getItem(UI_ZOOM_KEY)
+  if (!data) return null
+  const zoom = Number(data)
+  return Number.isFinite(zoom) ? zoom : null
 }

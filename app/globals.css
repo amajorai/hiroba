@@ -10,20 +10,6 @@
   z-index: 10;
 }
 
-/* Corner handles — sized/positioned by us, visual dots rendered via React resizeHandle prop */
-.react-grid-item:hover .react-resizable-handle-se svg,
-.react-grid-item:hover .react-resizable-handle-sw svg,
-.react-grid-item:hover .react-resizable-handle-ne svg,
-.react-grid-item:hover .react-resizable-handle-nw svg {
-  fill: oklch(0.6 0 0 / 0.5);
-}
-.react-resizable-handle-se:hover svg,
-.react-resizable-handle-sw:hover svg,
-.react-resizable-handle-ne:hover svg,
-.react-resizable-handle-nw:hover svg {
-  fill: oklch(0.6 0 0 / 0.85) !important;
-}
-
 .react-resizable-handle-se { bottom: 0; right: 0; width: 20px; height: 20px; cursor: se-resize; }
 .react-resizable-handle-sw { bottom: 0; left: 0;  width: 20px; height: 20px; cursor: sw-resize; }
 .react-resizable-handle-ne { top: 0;    right: 0; width: 20px; height: 20px; cursor: ne-resize; }
@@ -55,51 +41,6 @@
 }
 .react-resizable-handle-n { top: 0; bottom: auto !important; }
 .react-resizable-handle-s { bottom: 0; top: auto !important; }
-
-/* Edge handle visual indicator — a short pill that appears on hover */
-.react-resizable-handle-e::after,
-.react-resizable-handle-w::after,
-.react-resizable-handle-n::after,
-.react-resizable-handle-s::after {
-  content: "";
-  position: absolute;
-  border-radius: 9999px;
-  background: oklch(0.6 0 0 / 0);
-  transition: background 0.15s;
-}
-.react-resizable-handle-e::after,
-.react-resizable-handle-w::after {
-  top: 50%;
-  transform: translateY(-50%);
-  width: 3px;
-  height: 28px;
-}
-.react-resizable-handle-e::after { right: 2px; }
-.react-resizable-handle-w::after { left: 2px; }
-
-.react-resizable-handle-n::after,
-.react-resizable-handle-s::after {
-  left: 50%;
-  transform: translateX(-50%);
-  width: 28px;
-  height: 3px;
-}
-.react-resizable-handle-n::after { top: 2px; }
-.react-resizable-handle-s::after { bottom: 2px; }
-
-.react-grid-item:hover .react-resizable-handle-e::after,
-.react-grid-item:hover .react-resizable-handle-w::after,
-.react-grid-item:hover .react-resizable-handle-n::after,
-.react-grid-item:hover .react-resizable-handle-s::after {
-  background: oklch(0.6 0 0 / 0.35);
-}
-
-.react-resizable-handle-e:hover::after,
-.react-resizable-handle-w:hover::after,
-.react-resizable-handle-n:hover::after,
-.react-resizable-handle-s:hover::after {
-  background: oklch(0.6 0 0 / 0.75) !important;
-}
 
 /* Dragging placeholder */
 .react-grid-item.react-grid-placeholder {

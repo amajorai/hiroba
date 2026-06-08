@@ -15,14 +15,22 @@ import {
   Add01Icon,
   Settings01Icon,
   Cancel01Icon,
-  GripHorizontalIcon,
   Refresh01Icon,
   BubbleChatIcon,
+  ZoomIcon,
 } from "@hugeicons/core-free-icons"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip"
-import { Separator } from "@/components/ui/separator"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuLabel,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import PLATFORMS from "@/lib/platforms"
 import type { ChatPanel } from "@/lib/types"
 import {
@@ -30,6 +38,8 @@ import {
   savePanels,
   loadLayouts,
   saveLayouts,
+  loadUiZoom,
+  saveUiZoom,
   loadUserPresets,
   saveUserPresets,
   type UserPreset,
@@ -42,9 +52,67 @@ const ResponsiveGridLayout = WidthProvider(Responsive)
 
 const COLS = 12
 const ROWS = 20
+const TITLEBAR_HIDE_DELAY = 3000
+const UI_ZOOM_OPTIONS = [0.75, 0.9, 1, 1.1, 1.25] as const
+const BREAKPOINTS = ["lg", "md", "sm"] as const
 
 function makeItem(id: string, x: number, y: number, w: number, h: number): LayoutItem {
   return { i: id, x, y, w, h, minW: 2, minH: 4 }
+}
+
+function overlaps(a: LayoutItem, b: LayoutItem) {
+  return a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y
+}
+
+function getResizeDirections(oldItem: LayoutItem, newItem: LayoutItem) {
+  return {
+    east: newItem.x + newItem.w > oldItem.x + oldItem.w,
+    west: newItem.x < oldItem.x,
+    south: newItem.y + newItem.h > oldItem.y + oldItem.h,
+    north: newItem.y < oldItem.y,
+  }
+}
+
+function resolveResizeCollisions(layout: Layout, oldItem: LayoutItem, newItem: LayoutItem): LayoutItem[] {
+  const directions = getResizeDirections(oldItem, newItem)
+
+  return (layout as LayoutItem[]).map((item) => {
+    if (item.i === newItem.i) return item
+    if (!overlaps(item, newItem)) return item
+
+    const next = { ...item }
+    const minW = next.minW ?? 1
+    const minH = next.minH ?? 1
+
+    if (directions.east && item.x >= oldItem.x) {
+      const right = item.x + item.w
+      next.x = Math.min(newItem.x + newItem.w, right - minW)
+      next.w = Math.max(right - next.x, minW)
+    }
+
+    if (directions.west && item.x + item.w <= oldItem.x + oldItem.w) {
+      next.w = Math.max(newItem.x - item.x, minW)
+    }
+
+    if (directions.south && item.y >= oldItem.y) {
+      const bottom = item.y + item.h
+      next.y = Math.min(newItem.y + newItem.h, bottom - minH)
+      next.h = Math.max(bottom - next.y, minH)
+    }
+
+    if (directions.north && item.y + item.h <= oldItem.y + oldItem.h) {
+      next.h = Math.max(newItem.y - item.y, minH)
+    }
+
+    return next
+  })
+}
+
+function syncResponsiveLayouts(baseLayout: LayoutItem[]): ResponsiveLayouts {
+  return BREAKPOINTS.reduce<ResponsiveLayouts>((acc, breakpoint) => {
+    acc[breakpoint] = baseLayout.map((item) => ({ ...item }))
+    return acc
+  }, {})
 }
 
 // Equal-column layout — always fills full viewport, no overflow
@@ -71,8 +139,13 @@ export default function ChatGrid() {
   const [userPresets, setUserPresets] = useState<UserPreset[]>([])
   const [swapTargetId, setSwapTargetId] = useState<string | null>(null)
   const [draggingId, setDraggingId] = useState<string | null>(null)
+  const [visibleTitlebarId, setVisibleTitlebarId] = useState<string | null>(null)
+  const [uiZoom, setUiZoom] = useState(1)
+  const [gridRevision, setGridRevision] = useState(0)
   const initialized = useRef(false)
   const swapping = useRef(false)
+  const resizing = useRef(false)
+  const titlebarTimer = useRef<number | null>(null)
 
   useEffect(() => {
     if (initialized.current) return
@@ -85,17 +158,26 @@ export default function ChatGrid() {
     setPanels(initialPanels)
     setLayouts(initialLayouts)
     setUserPresets(loadUserPresets())
+    setUiZoom(loadUiZoom() ?? 1)
   }, [])
 
   useEffect(() => {
     const calc = () => {
       // rowHeight × ROWS = viewport height (minus margin/padding)
       const marginTotal = 4 * (ROWS - 1) + 8
-      setRowHeight(Math.max(Math.floor((window.innerHeight - marginTotal) / ROWS), 16))
+      setRowHeight(
+        Math.max(Math.floor((window.innerHeight / uiZoom - marginTotal) / ROWS), 16)
+      )
     }
     calc()
     window.addEventListener("resize", calc)
     return () => window.removeEventListener("resize", calc)
+  }, [uiZoom])
+
+  useEffect(() => {
+    return () => {
+      if (titlebarTimer.current) window.clearTimeout(titlebarTimer.current)
+    }
   }, [])
 
   const saveLayout = useCallback((next: ResponsiveLayouts) => {
@@ -106,6 +188,7 @@ export default function ChatGrid() {
   const handleLayoutChange = useCallback(
     (_current: Layout, allLayouts: ResponsiveLayouts) => {
       if (swapping.current) return
+      if (resizing.current) return
       saveLayout(allLayouts)
     },
     [saveLayout]
@@ -177,6 +260,28 @@ export default function ChatGrid() {
       requestAnimationFrame(() => { swapping.current = false })
     },
     [findSwapTarget, saveLayout]
+  )
+
+  const handleResize = useCallback(
+    (layout: Layout, oldItem: LayoutItem | null, newItem: LayoutItem | null) => {
+      if (!oldItem || !newItem) return
+      resizing.current = true
+      const resolved = resolveResizeCollisions(layout, oldItem, newItem)
+      const next = syncResponsiveLayouts(resolved)
+      setLayouts(next)
+    },
+    []
+  )
+
+  const handleResizeStop = useCallback(
+    (layout: Layout, oldItem: LayoutItem | null, newItem: LayoutItem | null) => {
+      if (!oldItem || !newItem) return
+      resizing.current = true
+      saveLayout(syncResponsiveLayouts(resolveResizeCollisions(layout, oldItem, newItem)))
+      setGridRevision((revision) => revision + 1)
+      requestAnimationFrame(() => { resizing.current = false })
+    },
+    [saveLayout]
   )
 
   const addPanel = useCallback(
@@ -252,40 +357,43 @@ export default function ChatGrid() {
     [saveLayout]
   )
 
-  const panelCount = panels.length
+  const showTitlebar = useCallback((id: string) => {
+    setVisibleTitlebarId(id)
+    if (titlebarTimer.current) window.clearTimeout(titlebarTimer.current)
+    titlebarTimer.current = window.setTimeout(() => {
+      setVisibleTitlebarId((current) => (current === id ? null : current))
+    }, TITLEBAR_HIDE_DELAY)
+  }, [])
 
-  // 3-dot corner handles, plain div for edge handles
+  const selectUiZoom = useCallback((value: string) => {
+    const nextZoom = Number(value)
+    setUiZoom(nextZoom)
+    saveUiZoom(nextZoom)
+  }, [])
+
+  const panelCount = panels.length
+  const gridScaleStyle = {
+    width: `${100 / uiZoom}%`,
+    height: `${100 / uiZoom}%`,
+    transform: `scale(${uiZoom})`,
+    transformOrigin: "top left",
+  }
+
   function renderResizeHandle(axis: ResizeHandleAxis, ref: React.Ref<HTMLElement>) {
-    const corners: Partial<Record<ResizeHandleAxis, number>> = { se: 0, sw: 90, nw: 180, ne: 270 }
-    const rotation = corners[axis]
-    if (rotation === undefined) {
-      // Edge handle — no visual content, CSS handles the pill indicator
-      return <div ref={ref as React.Ref<HTMLDivElement>} className={`react-resizable-handle react-resizable-handle-${axis}`} />
-    }
     return (
       <div
         ref={ref as React.Ref<HTMLDivElement>}
-        className={`react-resizable-handle react-resizable-handle-${axis} flex items-center justify-center`}
-      >
-        <svg
-          width="10" height="10" viewBox="0 0 10 10"
-          style={{ transform: `rotate(${rotation}deg)` }}
-          className="fill-foreground/25 transition-colors"
-        >
-          {/* 3 dots in SE-corner L-shape */}
-          <circle cx="7.5" cy="7.5" r="1.5" />
-          <circle cx="3.5" cy="7.5" r="1.5" />
-          <circle cx="7.5" cy="3.5" r="1.5" />
-        </svg>
-      </div>
+        className={`react-resizable-handle react-resizable-handle-${axis}`}
+      />
     )
   }
 
   return (
     <div className="relative h-screen bg-background overflow-hidden">
       {panelCount > 0 ? (
-        <div className="h-full overflow-hidden">
+        <div className="h-full overflow-hidden" style={gridScaleStyle}>
           <ResponsiveGridLayout
+            key={gridRevision}
             layouts={layouts}
             breakpoints={{ lg: 1200, md: 996, sm: 768, xs: 480, xxs: 0 }}
             cols={{ lg: COLS, md: 10, sm: 6, xs: 4, xxs: 2 }}
@@ -300,6 +408,8 @@ export default function ChatGrid() {
             onDragStart={handleDragStart}
             onDrag={handleDrag}
             onDragStop={handleDragStop}
+            onResize={handleResize}
+            onResizeStop={handleResizeStop}
             margin={[4, 4]}
             containerPadding={[4, 4]}
           >
@@ -308,17 +418,23 @@ export default function ChatGrid() {
               return (
                 <div
                   key={panel.id}
+                  onMouseEnter={() => showTitlebar(panel.id)}
+                  onMouseMove={() => showTitlebar(panel.id)}
                   className={cn(
-                    "flex flex-col rounded-2xl overflow-hidden border bg-card transition-all duration-100",
+                    "relative flex flex-col overflow-hidden rounded-2xl border bg-card transition-all duration-100",
                     swapTargetId === panel.id &&
                       "ring-2 ring-primary shadow-lg shadow-primary/20 scale-[0.99]",
                     draggingId === panel.id && "opacity-50"
                   )}
                 >
-                  <div className="drag-handle flex h-9 shrink-0 cursor-grab items-center gap-2 border-b bg-card px-2 active:cursor-grabbing select-none">
-                    <span className="text-muted-foreground/40 shrink-0">
-                      <HugeiconsIcon icon={GripHorizontalIcon} size={14} strokeWidth={1.5} />
-                    </span>
+                  <div
+                    className={cn(
+                      "drag-handle absolute inset-x-0 top-0 z-20 flex h-9 cursor-grab items-center gap-2 border-b bg-card/95 px-2 shadow-sm backdrop-blur-sm transition-all duration-150 active:cursor-grabbing select-none",
+                      visibleTitlebarId === panel.id
+                        ? "translate-y-0 opacity-100"
+                        : "-translate-y-full opacity-0"
+                    )}
+                  >
                     <pc.icon className="size-3.5 shrink-0" />
                     <span className="truncate text-xs font-medium">{panel.label}</span>
                     <div className="ml-auto flex items-center">
@@ -352,7 +468,7 @@ export default function ChatGrid() {
                       </Tooltip>
                     </div>
                   </div>
-                  <div className="flex-1 min-h-0">
+                  <div className="min-h-0 flex-1">
                     <iframe
                       src={pc.buildUrl(panel.channel)}
                       className="size-full"
@@ -409,6 +525,36 @@ export default function ChatGrid() {
               </TooltipTrigger>
               <TooltipContent side="top">Reset layout</TooltipContent>
             </Tooltip>
+            <DropdownMenu>
+              <Tooltip>
+                <TooltipTrigger
+                  render={
+                    <DropdownMenuTrigger
+                      render={<Button variant="ghost" size="sm" />}
+                    />
+                  }
+                >
+                  <HugeiconsIcon icon={ZoomIcon} strokeWidth={2} data-icon="inline-start" />
+                  {Math.round(uiZoom * 100)}%
+                </TooltipTrigger>
+                <TooltipContent side="top">UI zoom</TooltipContent>
+              </Tooltip>
+              <DropdownMenuContent align="center" side="top" className="min-w-32">
+                <DropdownMenuLabel>UI zoom</DropdownMenuLabel>
+                <DropdownMenuGroup>
+                  <DropdownMenuRadioGroup
+                    value={String(uiZoom)}
+                    onValueChange={selectUiZoom}
+                  >
+                    {UI_ZOOM_OPTIONS.map((zoom) => (
+                      <DropdownMenuRadioItem key={zoom} value={String(zoom)}>
+                        {Math.round(zoom * 100)}%
+                      </DropdownMenuRadioItem>
+                    ))}
+                  </DropdownMenuRadioGroup>
+                </DropdownMenuGroup>
+              </DropdownMenuContent>
+            </DropdownMenu>
             <Button size="sm" onClick={() => setAddOpen(true)}>
               <HugeiconsIcon icon={Add01Icon} strokeWidth={2} />
               Add Chat
