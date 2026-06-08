@@ -4,6 +4,8 @@
 
 Hiroba (広場, Japanese for "public square/plaza") is a single-tab chat aggregator for live streamers and viewers. Instead of juggling five different browser windows for every platform's popout chat, Hiroba puts them all on one page in a flexible, resizable, drag-and-drop grid.
 
+Live: [https://hirobachat.vercel.app](https://hirobachat.vercel.app)
+
 ## Features
 
 - **Multi-platform** - YouTube Live, Twitch, Kick, Rumble, Facebook out of the box
